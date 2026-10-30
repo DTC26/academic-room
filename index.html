@@ -15,24 +15,33 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <script>
 /* DTC Academic Room · front door.
- * This page only opens the app. The app, the class data and sign-in live on UGM's Google Workspace.
- * - Opened from the installed icon (computer, Android, iPhone), or from a link on a device that has been here before: straight to the app.
- * - First visit, or ?add: this page, to add the DTC 26 icon.
- * - ?push (opened from the app's "Turn on notifications"): asks this device for permission, then returns to the app. */
+ * This page opens the app hosted on UGM's Google Workspace via an explicit User Gesture (Splash Screen)
+ * to prevent Android WebAPK sandbox isolation and session errors while preserving standalone mode & push notifications. */
 var APP = 'https://script.google.com/macros/s/AKfycbx7M7QbqacMxCPAQPlLW_74IL2SDvunoiM7rN3s_qfloYpF6rPkgWFgpyrSmPMffHO0/exec';
 var UA = navigator.userAgent || '', IOS = /iPhone|iPad|iPod/i.test(UA) || (/Macintosh/.test(UA) && navigator.maxTouchPoints > 1);
 var MODE = 'page';
+var TARGET_URL = '';
+
 (function () {
   var q = location.search, add = /[?&]add\b/.test(q), fromIcon = /[?&]app\b/.test(q), view = (q.match(/[?&]view=(\w+)/) || [])[1];
   if (/[?&]push\b/.test(q)) { MODE = 'push'; return; }
-  var to = APP + '?src=home' + (view ? '&view=' + view : ''); // a notification opens the app on the right page
+  var to = APP + '?src=home' + (view ? '&view=' + view : '');
   var installed = (window.matchMedia && (matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: window-controls-overlay)').matches)) || navigator.standalone === true;
   var seen = false; try { seen = localStorage.getItem('dtc-visited') === '1'; } catch (e) {}
-  // Opened from the Home Screen / desktop icon: always the app, whatever address the icon was saved with (iPhone keeps ?add from a QR code).
-  if (installed || (!add && fromIcon)) { location.replace(to); MODE = 'go'; return; }
-  if (!add && seen) { location.replace(APP + '?src=link'); MODE = 'go'; return; }
+
+  // Trigger Splash Screen (User Gesture Bypass) for installed app or returning visits
+  if (installed || (!add && fromIcon)) {
+    TARGET_URL = to;
+    MODE = 'splash';
+    return;
+  }
+  if (!add && seen) {
+    TARGET_URL = APP + '?src=link';
+    MODE = 'splash';
+    return;
+  }
   try { localStorage.setItem('dtc-visited', '1'); } catch (e) {}
-  try { history.replaceState(null, '', location.pathname + '?app'); } catch (e) {} // the address saved with the icon opens the app
+  try { history.replaceState(null, '', location.pathname + '?app'); } catch (e) {}
 })();
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -41,7 +50,10 @@ var MODE = 'page';
 :root{--ink:#25332f;--muted:#5f6a63;--accent:#3f6b52;--line:#d5dad2;--paper:#fafaf7;--panel:#eef1ec;--warm:#f4e8d2;--warmText:#6b4b12}
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--paper);color:var(--ink);font-family:Lexend,system-ui,sans-serif}
-/* Welcome page */
+/* Splash / Launch Screen */
+#splashPage{display:none;min-height:100vh;justify-content:center;align-items:center;padding:32px 16px calc(40px + env(safe-area-inset-bottom))}
+body.splash #splashPage{display:flex}
+/* Pages */
 #pushPage{display:flex;min-height:100vh;justify-content:center;padding:48px 16px calc(40px + env(safe-area-inset-bottom))}#pushPage[hidden]{display:none!important}
 #page{display:none;min-height:100vh;justify-content:center;padding:32px 16px calc(40px + env(safe-area-inset-bottom))}
 body.page #page{display:flex}
@@ -75,6 +87,19 @@ footer a{color:var(--accent)}
 </style>
 </head>
 <body>
+
+<!-- Splash Screen (User Gesture Bypass for WebAPK/PWA) -->
+<div id="splashPage"><main style="text-align:center;">
+  <img class="logo" src="icon-192.png" alt="" width="76" height="76" style="margin:0 auto 16px;">
+  <h1>DTC Academic Room</h1>
+  <p class="sub">Ruang Akademik DTC '26 · MIHI UGM</p>
+  <div class="card" style="text-align:left;">
+    <p class="lead" style="margin-bottom:16px;">Ketuk tombol di bawah untuk masuk dan menyinkronkan akun UGM Anda secara langsung.</p>
+    <button type="button" class="btn green" id="btnLaunch">Masuk ke Aplikasi →</button>
+  </div>
+  <p class="note"><b>Catatan:</b> Jika muncul halaman pilihan akun Google, silakan pilih akun kampus Anda (<code>@mail.ugm.ac.id</code>).</p>
+</main></div>
+
 <!-- Turn on notifications (opened from the app) -->
 <div id="pushPage" hidden><main>
   <img class="logo" src="icon-192.png" alt="" width="76" height="76">
@@ -86,6 +111,7 @@ footer a{color:var(--accent)}
   <a class="btn ghost" id="pBack" style="margin-top:10px">Not now, back to DTC</a>
   <p class="small" id="pFoot">Only for this device. You can turn it off any time in the app (your name → Notifications) or in this device's settings.</p>
 </main></div>
+
 <!-- Welcome page (first visit) -->
 <div id="page"><main>
   <img class="logo" src="icon-192.png" alt="" width="76" height="76">
@@ -135,7 +161,6 @@ footer a{color:var(--accent)}
 
   <p class="note"><b>Sign in with your UGM account.</b> If the app says you can only view, tap your name at the top right and switch to your UGM account.</p>
   <a class="skip" id="skip">Skip, open without installing →</a>
-
 
 </main></div>
 <div class="pointer" id="pointer" hidden>Start here: tap ☰ next to the address</div>
@@ -189,21 +214,32 @@ footer a{color:var(--accent)}
   };
 })();
 </script>
+
 <script>
 (function () {
-  if (MODE === 'go' || MODE === 'push') return;
   var $ = function (id) { return document.getElementById(id); };
+
+  if (MODE === 'splash') {
+    document.body.className = 'splash';
+    $('btnLaunch').onclick = function () {
+      location.href = TARGET_URL || (APP + '?src=home');
+    };
+    return;
+  }
+
+  if (MODE === 'push') return;
+
   document.body.className = 'page';
   var android = /Android/i.test(UA), edge = /Edg\//.test(UA), chromeish = /Chrome\//.test(UA);
   var inApp = /FBAN|FBAV|Instagram|Line\/|WhatsApp|; wv\)|GSA\//i.test(UA), iosSafari = IOS && /Safari\//.test(UA) && !/CriOS|FxiOS|EdgiOS/.test(UA) && !inApp;
   var here = location.origin + location.pathname;
-  $('skip').href = APP + '?src=link'; $('openNow').href = location.pathname + '?app'; // in the app's own address: Android hands it to the installed app
-  // Installed from this page on a computer: Chrome turns this very tab into the app window. Go straight to the app.
+  $('skip').href = APP + '?src=link'; $('openNow').href = location.pathname + '?app';
+
   try { var mq = matchMedia('(display-mode: standalone)'), go = function () { if (mq.matches) location.replace(APP + '?src=home'); }; if (mq.addEventListener) mq.addEventListener('change', go); else mq.addListener(go); } catch (e) {}
   var show = function (id) { $(id).hidden = false; };
   var steps = function (list) { var ol = $('manualSteps'); list.forEach(function (h, i) { var li = document.createElement('li'); li.innerHTML = '<span class="num">' + (i + 1) + '</span><span>' + h + '</span>'; ol.appendChild(li); }); };
 
-  if (IOS && !iosSafari) {                       // WhatsApp, Instagram, Chrome on iPhone…
+  if (IOS && !iosSafari) {
     show('cInApp');
     $('copy').hidden = false;
     $('inAppLead').textContent = /CriOS|FxiOS|EdgiOS/.test(UA) ? 'On iPhone, apps can only be added to the Home Screen from Safari.' : 'WhatsApp\'s built-in browser cannot install apps.';
@@ -213,17 +249,15 @@ footer a{color:var(--accent)}
   } else if (iosSafari) {
     show('cIos'); show('pointer');
     setTimeout(function () { $('pointer').hidden = true; }, 12000);
-  } else if (android && inApp) {                 // WhatsApp's in-app browser on Android: one tap to Chrome
+  } else if (android && inApp) {
     show('cInApp'); $('realBrowser').textContent = 'Chrome';
     $('toChrome').hidden = false;
     $('toChrome').href = 'intent://' + location.host + location.pathname + '?add#Intent;scheme=https;package=com.android.chrome;end';
     $('inAppHelp').textContent = 'If the button does nothing: tap ⋮ at the top right, then "Open in Chrome" / "Open in browser".';
   } else {
-    // Chrome, Edge, Samsung Internet: the browser's own install, in one tap. Manual steps if it does not offer it.
     var desktop = !android;
     if (desktop) { $('installLead').textContent = 'The DTC 26 icon appears on your desktop and taskbar, and the app opens in its own window.'; $('doneWhere').textContent = 'desktop or taskbar'; }
     var deferred = null;
-    // Installed: only one thing left to do. Everything else on the page goes; on a computer the window switches to the app by itself.
     function installed() {
       ['cInstall', 'cManual'].forEach(function (id) { $(id).hidden = true; });
       document.querySelectorAll('.note,.skip,.sub').forEach(function (n) { n.hidden = true; });
