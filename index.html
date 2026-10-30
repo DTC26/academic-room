@@ -30,28 +30,46 @@ var MODE = 'page';
   var android = /Android/i.test(UA);
   var authSynced = false; try { authSynced = localStorage.getItem('dtc-auth-synced') === '1'; } catch (e) {}
 
-  // A subscription belongs to the GitHub Pages origin (where sw.js runs). Pass only its short hash to Apps Script
-  // so the app can restore the per-device ON state after a full close/relaunch, without exposing the endpoint.
+  // Store only a short hash of this installation's push endpoint on GitHub Pages.
+  // Safari may temporarily return no Service Worker registration during a Home Screen launch;
+  // the saved hash lets Apps Script still identify the already-subscribed device.
+  var PUSH_KEY_STORAGE = 'dtc-push-device-key';
+  function savedPushKey() { try { var k=localStorage.getItem(PUSH_KEY_STORAGE)||''; return /^[A-Za-z0-9_-]{12}$/.test(k)?k:''; } catch(e) { return ''; } }
+  function endpointKey(endpoint) {
+    return crypto.subtle.digest('SHA-256', new TextEncoder().encode(endpoint)).then(function(digest) {
+      var bytes=new Uint8Array(digest), raw='';
+      for(var i=0;i<bytes.length;i++)raw+=String.fromCharCode(bytes[i]);
+      return btoa(raw).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'').slice(0,12);
+    });
+  }
   function redirectToApp(url, chooseAccount) {
-    var finish = function (dest) {
+    var finish = function (dest, deviceKey) {
+      try { var u=new URL(dest); if(deviceKey)u.searchParams.set('deviceKey',deviceKey); dest=u.toString(); } catch(e) {}
       if (chooseAccount) {
         try { localStorage.setItem('dtc-auth-synced', '1'); } catch (e) {}
         location.replace('https://accounts.google.com/AccountChooser?continue=' + encodeURIComponent(dest));
       } else location.replace(dest);
     };
-    var fallback = function () { finish(url); };
+    var fallback = function () { finish(url, savedPushKey()); };
     try {
       if (!navigator.serviceWorker || !window.crypto || !crypto.subtle || !window.TextEncoder) { fallback(); return; }
-      navigator.serviceWorker.getRegistration().then(function (reg) {
-        return reg && reg.pushManager ? reg.pushManager.getSubscription() : null;
-      }).then(function (sub) {
-        if (!sub || !sub.endpoint) { fallback(); return; }
-        return crypto.subtle.digest('SHA-256', new TextEncoder().encode(sub.endpoint)).then(function (digest) {
-          var bytes = new Uint8Array(digest), raw = '';
-          for (var i = 0; i < bytes.length; i++) raw += String.fromCharCode(bytes[i]);
-          var key = btoa(raw).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '').slice(0, 12);
-          var dest = new URL(url); dest.searchParams.set('deviceKey', key); finish(dest.toString());
-        });
+      var registrations = navigator.serviceWorker.getRegistrations
+        ? navigator.serviceWorker.getRegistrations()
+        : navigator.serviceWorker.getRegistration().then(function(r){return r?[r]:[];});
+      registrations.then(function(regs) {
+        var reg=(regs||[]).filter(function(r){return r && r.pushManager;})[0];
+        if(!reg)return {hasRegistration:false,sub:null};
+        return reg.pushManager.getSubscription().then(function(sub){return {hasRegistration:true,sub:sub};});
+      }).then(function(result) {
+        if(!result || !result.sub || !result.sub.endpoint) {
+          if(result && result.hasRegistration) { try{localStorage.removeItem(PUSH_KEY_STORAGE);}catch(e){} finish(url,''); }
+          else fallback();
+          return;
+        }
+        endpointKey(result.sub.endpoint).then(function(k){
+          try{localStorage.setItem(PUSH_KEY_STORAGE,k);}catch(e){}
+          finish(url,k);
+        }).catch(fallback);
       }).catch(fallback);
     } catch (e) { fallback(); }
   }
@@ -186,6 +204,14 @@ footer a{color:var(--accent)}
   if (Notification.permission === 'denied') { say(T.denied); $('pOn').hidden = true; $('pAsk').hidden = true; return; }
   var bytes = function (b64) { var s = b64.replace(/-/g, '+').replace(/_/g, '/'); s += '==='.slice((s.length + 3) % 4); var raw = atob(s), out = new Uint8Array(raw.length); for (var i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i); return out; };
   var b64u = function (str) { return btoa(unescape(encodeURIComponent(str))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); };
+  // Separate helper here because this push-page script has its own function scope.
+  var endpointKey = function (endpoint) {
+    return crypto.subtle.digest('SHA-256', new TextEncoder().encode(endpoint)).then(function(digest) {
+      var bytes=new Uint8Array(digest), raw='';
+      for(var i=0;i<bytes.length;i++)raw+=String.fromCharCode(bytes[i]);
+      return btoa(raw).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'').slice(0,12);
+    });
+  };
   var same = function (a, b) { if (!a || a.byteLength !== b.length) return false; var x = new Uint8Array(a); for (var i = 0; i < b.length; i++) if (x[i] !== b[i]) return false; return true; };
   $('pOn').onclick = function () {
     var btn = this; btn.disabled = true; btn.textContent = T.wait; $('pMsg').hidden = true;
@@ -200,24 +226,24 @@ footer a{color:var(--accent)}
       });
     }).then(function (sub) {
       var j = sub.toJSON();
-      var form = document.createElement('form');
-form.method = 'POST';
-form.action = APP + '?view=dashboard&src=home'; // Save on the server, then return to the installed app
-
-var subInput = document.createElement('input');
-subInput.type = 'hidden';
-subInput.name = 'pushsub';
-subInput.value = b64u(JSON.stringify({endpoint: j.endpoint, p256dh: j.keys.p256dh, auth: j.keys.auth}));
-
-var devInput = document.createElement('input');
-devInput.type = 'hidden';
-devInput.name = 'dev';
-devInput.value = dev;
-
-form.appendChild(subInput);
-form.appendChild(devInput);
-document.body.appendChild(form);
-form.submit();
+      return endpointKey(j.endpoint).then(function(deviceKey) {
+        try { localStorage.setItem(PUSH_KEY_STORAGE, deviceKey); } catch(e) {}
+        var form = document.createElement('form');
+        form.method = 'POST';
+        form.action = APP + '?view=dashboard&src=home&deviceKey=' + encodeURIComponent(deviceKey);
+        var subInput = document.createElement('input');
+        subInput.type = 'hidden';
+        subInput.name = 'pushsub';
+        subInput.value = b64u(JSON.stringify({endpoint: j.endpoint, p256dh: j.keys.p256dh, auth: j.keys.auth}));
+        var devInput = document.createElement('input');
+        devInput.type = 'hidden';
+        devInput.name = 'dev';
+        devInput.value = dev;
+        form.appendChild(subInput);
+        form.appendChild(devInput);
+        document.body.appendChild(form);
+        form.submit();
+      });
     }).catch(function (e) {
       btn.disabled = false; btn.textContent = T.on;
       say(e && e.message === 'denied' ? T.denied : T.fail + (e && e.message || e));
