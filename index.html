@@ -62,8 +62,9 @@ var MODE = 'page';
         return reg.pushManager.getSubscription().then(function(sub){return {hasRegistration:true,sub:sub};});
       }).then(function(result) {
         if(!result || !result.sub || !result.sub.endpoint) {
-          if(result && result.hasRegistration) { try{localStorage.removeItem(PUSH_KEY_STORAGE);}catch(e){} finish(url,''); }
-          else fallback();
+          // iOS may briefly expose the registration before getSubscription() is ready.
+          // Keep the last known endpoint fingerprint instead of erasing the server-side device match.
+          fallback();
           return;
         }
         endpointKey(result.sub.endpoint).then(function(k){
@@ -204,6 +205,8 @@ footer a{color:var(--accent)}
   if (Notification.permission === 'denied') { say(T.denied); $('pOn').hidden = true; $('pAsk').hidden = true; return; }
   var bytes = function (b64) { var s = b64.replace(/-/g, '+').replace(/_/g, '/'); s += '==='.slice((s.length + 3) % 4); var raw = atob(s), out = new Uint8Array(raw.length); for (var i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i); return out; };
   var b64u = function (str) { return btoa(unescape(encodeURIComponent(str))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); };
+  // This script runs in a separate IIFE from the front-door redirect code; declare the key here too.
+  var PUSH_KEY_STORAGE = 'dtc-push-device-key';
   // Separate helper here because this push-page script has its own function scope.
   var endpointKey = function (endpoint) {
     return crypto.subtle.digest('SHA-256', new TextEncoder().encode(endpoint)).then(function(digest) {
