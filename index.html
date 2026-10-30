@@ -14,14 +14,11 @@
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <script>
-/* DTC Academic Room · front door.
- * This page opens the app hosted on UGM's Google Workspace via an explicit User Gesture (Splash Screen)
- * to prevent Android WebAPK sandbox isolation and session errors while preserving standalone mode & push notifications. */
-var APP = 'https://script.google.com/macros/s/AKfycbx7M7QbqacMxCPAQPlLW_74IL2SDvunoiM7rN3s_qfloYpF6rPkgWFgpyrSmPMffHO0/exec';
+/* DTC Academic Room · front door. */
+// KEMBALIKAN KE URL UGM UNTUK MENCEGAH LOGIN LOOP DI DEVICE LAIN
+var APP = 'https://script.google.com/a/macros/mail.ugm.ac.id/s/AKfycbx7M7QbqacMxCPAQPlLW_74IL2SDvunoiM7rN3s_qfloYpF6rPkgWFgpyrSmPMffHO0/exec';
 var UA = navigator.userAgent || '', IOS = /iPhone|iPad|iPod/i.test(UA) || (/Macintosh/.test(UA) && navigator.maxTouchPoints > 1);
 var MODE = 'page';
-var TARGET_URL = '';
-
 (function () {
   var q = location.search, add = /[?&]add\b/.test(q), fromIcon = /[?&]app\b/.test(q), view = (q.match(/[?&]view=(\w+)/) || [])[1];
   if (/[?&]push\b/.test(q)) { MODE = 'push'; return; }
@@ -29,19 +26,24 @@ var TARGET_URL = '';
   var installed = (window.matchMedia && (matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: window-controls-overlay)').matches)) || navigator.standalone === true;
   var seen = false; try { seen = localStorage.getItem('dtc-visited') === '1'; } catch (e) {}
 
-  // Trigger Splash Screen (User Gesture Bypass) for installed app or returning visits
+  // --- LOGIKA BYPASS ANDROID 1 KALI ---
+  var android = /Android/i.test(UA);
+  var authSynced = false; try { authSynced = localStorage.getItem('dtc-auth-synced') === '1'; } catch (e) {}
+
   if (installed || (!add && fromIcon)) {
-    TARGET_URL = to;
-    MODE = 'splash';
-    return;
+    // Jika di Android PWA & baru pertama kali buka, paksa pilih akun 1 kali saja
+    if (android && !authSynced) {
+      try { localStorage.setItem('dtc-auth-synced', '1'); } catch (e) {}
+      location.replace('https://accounts.google.com/AccountChooser?continue=' + encodeURIComponent(to));
+      MODE = 'go'; return;
+    }
+    // Jika sudah pernah atau di iPhone/PC, langsung masuk instan
+    location.replace(to); MODE = 'go'; return;
   }
-  if (!add && seen) {
-    TARGET_URL = APP + '?src=link';
-    MODE = 'splash';
-    return;
-  }
+  
+  if (!add && seen) { location.replace(APP + '?src=link'); MODE = 'go'; return; }
   try { localStorage.setItem('dtc-visited', '1'); } catch (e) {}
-  try { history.replaceState(null, '', location.pathname + '?app'); } catch (e) {}
+  try { history.replaceState(null, '', location.pathname + '?app'); } catch (e) {} 
 })();
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -50,10 +52,6 @@ var TARGET_URL = '';
 :root{--ink:#25332f;--muted:#5f6a63;--accent:#3f6b52;--line:#d5dad2;--paper:#fafaf7;--panel:#eef1ec;--warm:#f4e8d2;--warmText:#6b4b12}
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--paper);color:var(--ink);font-family:Lexend,system-ui,sans-serif}
-/* Splash / Launch Screen */
-#splashPage{display:none;min-height:100vh;justify-content:center;align-items:center;padding:32px 16px calc(40px + env(safe-area-inset-bottom))}
-body.splash #splashPage{display:flex}
-/* Pages */
 #pushPage{display:flex;min-height:100vh;justify-content:center;padding:48px 16px calc(40px + env(safe-area-inset-bottom))}#pushPage[hidden]{display:none!important}
 #page{display:none;min-height:100vh;justify-content:center;padding:32px 16px calc(40px + env(safe-area-inset-bottom))}
 body.page #page{display:flex}
@@ -79,7 +77,6 @@ h1{font-size:27px;line-height:1.2;margin:0 0 6px;letter-spacing:-.01em}
 .note.warn{background:var(--warm);color:var(--warmText)}
 footer{font-size:12px;color:var(--muted);line-height:1.6;margin-top:16px}
 footer a{color:var(--accent)}
-/* iPhone: a pointer to Safari's toolbar */
 .pointer{position:fixed;left:16px;bottom:calc(76px + env(safe-area-inset-bottom));background:var(--ink);color:#fff;font-size:13px;font-weight:600;border-radius:999px;padding:9px 16px;box-shadow:0 6px 18px rgba(0,0,0,.2);animation:bob 1.4s ease-in-out infinite;white-space:nowrap}
 .pointer:after{content:"";position:absolute;left:22px;bottom:-6px;border:6px solid transparent;border-top-color:var(--ink);border-bottom:0}
 @keyframes bob{50%{transform:translateY(6px)}}
@@ -87,19 +84,6 @@ footer a{color:var(--accent)}
 </style>
 </head>
 <body>
-
-<!-- Splash Screen (User Gesture Bypass for WebAPK/PWA) -->
-<div id="splashPage"><main style="text-align:center;">
-  <img class="logo" src="icon-192.png" alt="" width="76" height="76" style="margin:0 auto 16px;">
-  <h1>DTC Academic Room</h1>
-  <p class="sub">Ruang Akademik DTC '26 · MIHI UGM</p>
-  <div class="card" style="text-align:left;">
-    <p class="lead" style="margin-bottom:16px;">Ketuk tombol di bawah untuk masuk dan menyinkronkan akun UGM Anda secara langsung.</p>
-    <button type="button" class="btn green" id="btnLaunch">Masuk ke Aplikasi →</button>
-  </div>
-  <p class="note"><b>Catatan:</b> Jika muncul halaman pilihan akun Google, silakan pilih akun kampus Anda (<code>@mail.ugm.ac.id</code>).</p>
-</main></div>
-
 <!-- Turn on notifications (opened from the app) -->
 <div id="pushPage" hidden><main>
   <img class="logo" src="icon-192.png" alt="" width="76" height="76">
@@ -111,27 +95,23 @@ footer a{color:var(--accent)}
   <a class="btn ghost" id="pBack" style="margin-top:10px">Not now, back to DTC</a>
   <p class="small" id="pFoot">Only for this device. You can turn it off any time in the app (your name → Notifications) or in this device's settings.</p>
 </main></div>
-
 <!-- Welcome page (first visit) -->
 <div id="page"><main>
   <img class="logo" src="icon-192.png" alt="" width="76" height="76">
   <h1>DTC Academic Room</h1>
   <p class="sub">Tasks, deadlines and course materials for DTC '26. <b>Install it once</b>, then just tap the icon.</p>
-
   <!-- Android / computer, browser can install in one tap -->
   <section class="card" id="cInstall" hidden>
     <h2>Install in one tap</h2>
     <p class="lead" id="installLead">The DTC 26 icon appears on your Home Screen.</p>
     <button type="button" class="btn green" id="install">Install DTC Academic Room</button>
   </section>
-
   <!-- Android / computer, manual -->
   <section class="card" id="cManual" hidden>
     <h2 id="manualTitle">Add to your Home Screen</h2>
     <p class="lead">Once only, about 10 seconds.</p>
     <ol class="steps" id="manualSteps"></ol>
   </section>
-
   <!-- iPhone Safari -->
   <section class="card" id="cIos" hidden>
     <h2>Add to your iPhone (about 15 seconds)</h2>
@@ -143,7 +123,6 @@ footer a{color:var(--accent)}
       <li><span class="num">4</span><span>Tap <b>Add</b>. Done: open DTC from its icon.</span></li>
     </ol>
   </section>
-
   <!-- In-app browsers (WhatsApp, Instagram…) -->
   <section class="card" id="cInApp" hidden>
     <h2>Open in <span id="realBrowser">Safari</span> first</h2>
@@ -152,22 +131,17 @@ footer a{color:var(--accent)}
     <button type="button" class="btn" id="copy" hidden>Copy link</button>
     <p class="small" id="inAppHelp"></p>
   </section>
-
   <section class="card done" id="cDone" hidden>
     <h2>Installed ✓</h2>
     <p class="lead" id="doneLead">Tap below to open it. Next time, just tap the DTC 26 icon on your <span id="doneWhere">Home Screen</span>.</p>
     <a class="btn green" id="openNow">Open DTC Academic Room</a>
   </section>
-
   <p class="note"><b>Sign in with your UGM account.</b> If the app says you can only view, tap your name at the top right and switch to your UGM account.</p>
   <a class="skip" id="skip">Skip, open without installing →</a>
-
 </main></div>
 <div class="pointer" id="pointer" hidden>Start here: tap ☰ next to the address</div>
-
 <script>
-/* Push: register the service worker (sw.js, next to this page), subscribe with the class key the app passed (?k=), then go back
- * to the app with the subscription in the address; the app saves it for the signed-in account. */
+/* Push: register the service worker */
 (function () {
   if (MODE !== 'push') return;
   var $ = function (id) { return document.getElementById(id); }, q = location.search;
@@ -182,7 +156,7 @@ footer a{color:var(--accent)}
     unsupported: 'Browser ini belum mendukung notifikasi web. Gunakan Chrome, Edge atau Safari (iPhone, dari ikon di Layar Utama).', wait: 'Sebentar…', fail: 'Belum berhasil: '}
     : {title: 'Turn on notifications', lead: '', ask: '', on: 'Turn on notifications', back: 'Not now, back to DTC', foot: '',
     ios: 'On iPhone, notifications only work from the DTC icon on your Home Screen. Add the icon first (see the User guide), open DTC from it, then try again.',
-    denied: 'Notifications are blocked for DTC on this device. Open the device or browser settings → Notifications → DTC Academic Room → Allow, then try again.',
+    denied: 'Notifications are blocked for DTC on this device. Open the device or browser settings → Notifications → Notifications → Allow, then try again.',
     unsupported: 'This browser cannot get web notifications yet. Use Chrome, Edge, or Safari on iPhone (from the Home Screen icon).', wait: 'One moment…', fail: 'That did not work: '};
   if (id) { document.documentElement.lang = 'id'; $('pTitle').textContent = T.title; $('pLead').textContent = T.lead; $('pAsk').innerHTML = T.ask; $('pOn').textContent = T.on; $('pBack').textContent = T.back; $('pFoot').textContent = T.foot; }
   var say = function (t) { $('pMsg').textContent = t; $('pMsg').hidden = false; };
@@ -214,31 +188,18 @@ footer a{color:var(--accent)}
   };
 })();
 </script>
-
 <script>
 (function () {
+  if (MODE === 'go' || MODE === 'push') return;
   var $ = function (id) { return document.getElementById(id); };
-
-  if (MODE === 'splash') {
-    document.body.className = 'splash';
-    $('btnLaunch').onclick = function () {
-      location.href = TARGET_URL || (APP + '?src=home');
-    };
-    return;
-  }
-
-  if (MODE === 'push') return;
-
   document.body.className = 'page';
   var android = /Android/i.test(UA), edge = /Edg\//.test(UA), chromeish = /Chrome\//.test(UA);
   var inApp = /FBAN|FBAV|Instagram|Line\/|WhatsApp|; wv\)|GSA\//i.test(UA), iosSafari = IOS && /Safari\//.test(UA) && !/CriOS|FxiOS|EdgiOS/.test(UA) && !inApp;
   var here = location.origin + location.pathname;
   $('skip').href = APP + '?src=link'; $('openNow').href = location.pathname + '?app';
-
   try { var mq = matchMedia('(display-mode: standalone)'), go = function () { if (mq.matches) location.replace(APP + '?src=home'); }; if (mq.addEventListener) mq.addEventListener('change', go); else mq.addListener(go); } catch (e) {}
   var show = function (id) { $(id).hidden = false; };
   var steps = function (list) { var ol = $('manualSteps'); list.forEach(function (h, i) { var li = document.createElement('li'); li.innerHTML = '<span class="num">' + (i + 1) + '</span><span>' + h + '</span>'; ol.appendChild(li); }); };
-
   if (IOS && !iosSafari) {
     show('cInApp');
     $('copy').hidden = false;
