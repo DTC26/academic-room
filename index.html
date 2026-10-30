@@ -52,8 +52,8 @@ var MODE = 'page';
 :root{--ink:#25332f;--muted:#5f6a63;--accent:#3f6b52;--line:#d5dad2;--paper:#fafaf7;--panel:#eef1ec;--warm:#f4e8d2;--warmText:#6b4b12}
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--paper);color:var(--ink);font-family:Lexend,system-ui,sans-serif}
-#pushPage{display:flex;min-height:100vh;justify-content:center;padding:48px 16px calc(40px + env(safe-area-inset-bottom))}#pushPage[hidden]{display:none!important}
-#page{display:none;min-height:100vh;justify-content:center;padding:32px 16px calc(40px + env(safe-area-inset-bottom))}
+#pushPage{display:flex;min-height:100vh;justify-content:center;padding:48px 16px env(safe-area-inset-bottom)}
+#page{display:none;min-height:100vh;justify-content:center;padding:32px 16px env(safe-area-inset-bottom)}
 body.page #page{display:flex}
 main{width:100%;max-width:460px}
 .logo{width:76px;height:76px;border-radius:20px;display:block;margin-bottom:16px}
@@ -132,10 +132,9 @@ footer a{color:var(--accent)}
     <p class="small" id="inAppHelp"></p>
   </section>
   <section class="card done" id="cDone" hidden>
-    <h2>Installed ✓</h2>
-    <p class="lead" id="doneLead">Tap below to open it. Next time, just tap the DTC 26 icon on your <span id="doneWhere">Home Screen</span>.</p>
-    <a class="btn green" id="openNow">Open DTC Academic Room</a>
-  </section>
+  <h2>Installed ✓</h2>
+  <p class="lead" id="doneLead">Aplikasi telah dipasang. Silakan tutup browser ini, lalu buka DTC Academic Room langsung dari <span id="doneWhere">Home Screen</span> Anda.</p>
+</section>
   <p class="note"><b>Sign in with your UGM account.</b> If the app says you can only view, tap your name at the top right and switch to your UGM account.</p>
   <a class="skip" id="skip">Skip, open without installing →</a>
 </main></div>
