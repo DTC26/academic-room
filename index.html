@@ -179,7 +179,24 @@ footer a{color:var(--accent)}
       });
     }).then(function (sub) {
       var j = sub.toJSON();
-      location.replace(APP + '?pushsub=' + b64u(JSON.stringify({endpoint: j.endpoint, p256dh: j.keys.p256dh, auth: j.keys.auth})) + '&dev=' + encodeURIComponent(dev) + '&src=home&view=dashboard');
+      var form = document.createElement('form');
+form.method = 'POST';
+form.action = APP + '?view=dashboard'; // Arahkan ke dashboard
+
+var subInput = document.createElement('input');
+subInput.type = 'hidden';
+subInput.name = 'pushsub';
+subInput.value = b64u(JSON.stringify({endpoint: j.endpoint, p256dh: j.keys.p256dh, auth: j.keys.auth}));
+
+var devInput = document.createElement('input');
+devInput.type = 'hidden';
+devInput.name = 'dev';
+devInput.value = dev;
+
+form.appendChild(subInput);
+form.appendChild(devInput);
+document.body.appendChild(form);
+form.submit();
     }).catch(function (e) {
       btn.disabled = false; btn.textContent = T.on;
       say(e && e.message === 'denied' ? T.denied : T.fail + (e && e.message || e));
