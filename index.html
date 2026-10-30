@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>DTC Academic Room</title>
+<meta name="description" content="Tasks, deadlines and course materials for DTC '26, MIHI UGM.">
+<meta name="theme-color" content="#fafaf7">
+<meta name="apple-mobile-web-app-title" content="DTC Academic Room">
+<link rel="preconnect" href="https://script.google.com">
+<link rel="preconnect" href="https://script.googleusercontent.com">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<script>
+/* DTC Academic Room · front door.
+ * This page only opens the app. The app, the class data and sign-in live on UGM's Google Workspace.
+ * - Opened from the installed icon (computer, Android, iPhone), or from a link on a device that has been here before: straight to the app.
+ * - First visit, or ?add: this page, to add the DTC 26 icon.
+ * - ?push (opened from the app's "Turn on notifications"): asks this device for permission, then returns to the app. */
+var APP = 'https://script.google.com/a/macros/mail.ugm.ac.id/s/AKfycbwMW79QTVbA6sSsib-WxSftYkNPYndTKp3ys-Raa60vl1iazCxlbsb3d5dbli3VWj6m/exec';
+var UA = navigator.userAgent || '', IOS = /iPhone|iPad|iPod/i.test(UA) || (/Macintosh/.test(UA) && navigator.maxTouchPoints > 1);
+var MODE = 'page';
+(function () {
+  var q = location.search, add = /[?&]add\b/.test(q), fromIcon = /[?&]app\b/.test(q), view = (q.match(/[?&]view=(\w+)/) || [])[1];
+  if (/[?&]push\b/.test(q)) { MODE = 'push'; return; }
+  var to = APP + '?src=home' + (view ? '&view=' + view : ''); // a notification opens the app on the right page
+  var installed = (window.matchMedia && (matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: window-controls-overlay)').matches)) || navigator.standalone === true;
+  var seen = false; try { seen = localStorage.getItem('dtc-visited') === '1'; } catch (e) {}
+  // Opened from the Home Screen / desktop icon: always the app, whatever address the icon was saved with (iPhone keeps ?add from a QR code).
+  if (installed || (!add && fromIcon)) { location.replace(to); MODE = 'go'; return; }
+  if (!add && seen) { location.replace(APP + '?src=link'); MODE = 'go'; return; }
+  try { localStorage.setItem('dtc-visited', '1'); } catch (e) {}
+  try { history.replaceState(null, '', location.pathname + '?app'); } catch (e) {} // the address saved with the icon opens the app
+})();
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#25332f;--muted:#5f6a63;--accent:#3f6b52;--line:#d5dad2;--paper:#fafaf7;--panel:#eef1ec;--warm:#f4e8d2;--warmText:#6b4b12}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--paper);color:var(--ink);font-family:Lexend,system-ui,sans-serif}
+/* Welcome page */
+#pushPage{display:flex;min-height:100vh;justify-content:center;padding:48px 16px calc(40px + env(safe-area-inset-bottom))}#pushPage[hidden]{display:none!important}
+#page{display:none;min-height:100vh;justify-content:center;padding:32px 16px calc(40px + env(safe-area-inset-bottom))}
+body.page #page{display:flex}
+main{width:100%;max-width:460px}
+.logo{width:76px;height:76px;border-radius:20px;display:block;margin-bottom:16px}
+h1{font-size:27px;line-height:1.2;margin:0 0 6px;letter-spacing:-.01em}
+.sub{color:var(--muted);font-size:15px;line-height:1.55;margin:0 0 22px}
+.card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:20px;margin:0 0 16px}
+.card h2{font-size:18px;margin:0 0 4px}.card .lead{margin:0 0 16px;font-size:14px;color:var(--muted);line-height:1.5}
+.btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:56px;border-radius:14px;border:0;background:var(--ink);color:#fafaf7;font:600 17px Lexend,system-ui,sans-serif;text-decoration:none;cursor:pointer;padding:0 16px}
+.btn.green{background:var(--accent)}
+.btn.ghost{background:#fff;color:var(--ink);border:1px solid #c4ccc1;font-size:15px;min-height:50px}
+.btn[hidden],[hidden]{display:none!important}
+.steps{list-style:none;margin:0;padding:0;display:grid;gap:12px}
+.steps li{display:grid;grid-template-columns:34px 1fr;gap:12px;align-items:start;font-size:15px;line-height:1.5}
+.num{width:34px;height:34px;border-radius:10px;background:#e2ede0;color:#2f5a3d;display:flex;align-items:center;justify-content:center;font-weight:700}
+.chip{display:inline-flex;align-items:center;gap:6px;background:var(--panel);border-radius:8px;padding:2px 8px;font-weight:600;white-space:nowrap}
+.chip svg{width:16px;height:16px}
+.small{font-size:13px;color:var(--muted);margin:6px 0 0}
+.done{background:#e2ede0;border-color:#cddfc8}
+.skip{display:block;text-align:center;color:var(--muted);font-size:14px;padding:14px 0;text-decoration:underline}
+.note{font-size:13px;line-height:1.5;background:var(--panel);border-radius:12px;padding:12px 14px;margin:0 0 12px}
+.note.warn{background:var(--warm);color:var(--warmText)}
+footer{font-size:12px;color:var(--muted);line-height:1.6;margin-top:16px}
+footer a{color:var(--accent)}
+/* iPhone: a pointer to Safari's toolbar */
+.pointer{position:fixed;left:16px;bottom:calc(76px + env(safe-area-inset-bottom));background:var(--ink);color:#fff;font-size:13px;font-weight:600;border-radius:999px;padding:9px 16px;box-shadow:0 6px 18px rgba(0,0,0,.2);animation:bob 1.4s ease-in-out infinite;white-space:nowrap}
+.pointer:after{content:"";position:absolute;left:22px;bottom:-6px;border:6px solid transparent;border-top-color:var(--ink);border-bottom:0}
+@keyframes bob{50%{transform:translateY(6px)}}
+@media (prefers-reduced-motion:reduce){.pointer,.spin{animation:none}}
+</style>
+</head>
+<body>
+<!-- Turn on notifications (opened from the app) -->
+<div id="pushPage" hidden><main>
+  <img class="logo" src="icon-192.png" alt="" width="76" height="76">
+  <h1 id="pTitle">Turn on notifications</h1>
+  <p class="sub" id="pLead">DTC will tell this device when a task is added, changed or removed, when a material is added to a task, about announcements, and before deadlines.</p>
+  <p class="note" id="pAsk">Your device will ask for permission. Tap <b>Allow</b>.</p>
+  <p class="note warn" id="pMsg" hidden></p>
+  <button type="button" class="btn green" id="pOn">Turn on notifications</button>
+  <a class="btn ghost" id="pBack" style="margin-top:10px">Not now, back to DTC</a>
+  <p class="small" id="pFoot">Only for this device. You can turn it off any time in the app (your name → Notifications) or in this device's settings.</p>
+</main></div>
+<!-- Welcome page (first visit) -->
+<div id="page"><main>
+  <img class="logo" src="icon-192.png" alt="" width="76" height="76">
+  <h1>DTC Academic Room</h1>
+  <p class="sub">Tasks, deadlines and course materials for DTC '26. <b>Install it once</b>, then just tap the icon.</p>
+
+  <!-- Android / computer, browser can install in one tap -->
+  <section class="card" id="cInstall" hidden>
+    <h2>Install in one tap</h2>
+    <p class="lead" id="installLead">The DTC 26 icon appears on your Home Screen.</p>
+    <button type="button" class="btn green" id="install">Install DTC Academic Room</button>
+  </section>
+
+  <!-- Android / computer, manual -->
+  <section class="card" id="cManual" hidden>
+    <h2 id="manualTitle">Add to your Home Screen</h2>
+    <p class="lead">Once only, about 10 seconds.</p>
+    <ol class="steps" id="manualSteps"></ol>
+  </section>
+
+  <!-- iPhone Safari -->
+  <section class="card" id="cIos" hidden>
+    <h2>Add to your iPhone (about 15 seconds)</h2>
+    <p class="lead">Follow these steps in Safari.</p>
+    <ol class="steps">
+      <li><span class="num">1</span><span>Tap <span class="chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 7h14M5 12h14M5 17h14"/></svg></span> next to the address bar, then tap <span class="chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 8l5-5 5 5"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg>Share</span>.</span></li>
+      <li><span class="num">2</span><span>Tap <b>View More</b> at the bottom right.</span></li>
+      <li><span class="num">3</span><span>Scroll down a little and tap <span class="chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M12 8v8M8 12h8"/></svg>Add to Home Screen</span></span></li>
+      <li><span class="num">4</span><span>Tap <b>Add</b>. Done: open DTC from its icon.</span></li>
+    </ol>
+  </section>
+
+  <!-- In-app browsers (WhatsApp, Instagram…) -->
+  <section class="card" id="cInApp" hidden>
+    <h2>Open in <span id="realBrowser">Safari</span> first</h2>
+    <p class="lead" id="inAppLead">WhatsApp's built-in browser cannot install apps.</p>
+    <a class="btn" id="toChrome" hidden>Open in Chrome</a>
+    <button type="button" class="btn" id="copy" hidden>Copy link</button>
+    <p class="small" id="inAppHelp"></p>
+  </section>
+
+  <section class="card done" id="cDone" hidden>
+    <h2>Installed ✓</h2>
+    <p class="lead" id="doneLead">Tap below to open it. Next time, just tap the DTC 26 icon on your <span id="doneWhere">Home Screen</span>.</p>
+    <a class="btn green" id="openNow">Open DTC Academic Room</a>
+  </section>
+
+  <p class="note"><b>Sign in with your UGM account.</b> If the app says you can only view, tap your name at the top right and switch to your UGM account.</p>
+  <a class="skip" id="skip">Skip, open without installing →</a>
+
+
+</main></div>
+<div class="pointer" id="pointer" hidden>Start here: tap ☰ next to the address</div>
+
+<script>
+/* Push: register the service worker (sw.js, next to this page), subscribe with the class key the app passed (?k=), then go back
+ * to the app with the subscription in the address; the app saves it for the signed-in account. */
+(function () {
+  if (MODE !== 'push') return;
+  var $ = function (id) { return document.getElementById(id); }, q = location.search;
+  var key = decodeURIComponent((q.match(/[?&]k=([^&]+)/) || [])[1] || ''), id = /[?&]lang=id\b/.test(q);
+  var standalone = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
+  var back = APP + '?src=home&view=dashboard';
+  $('pushPage').hidden = false; $('pBack').href = back;
+  var T = id ? {title: 'Aktifkan notifikasi', lead: 'DTC akan memberi tahu perangkat ini saat tugas ditambah, diubah atau dihapus, saat materi ditambahkan ke tugas, tentang pengumuman, dan sebelum tenggat.',
+    ask: 'Perangkat Anda akan meminta izin. Ketuk <b>Izinkan</b> / <b>Allow</b>.', on: 'Aktifkan notifikasi', back: 'Nanti saja, kembali ke DTC', foot: 'Hanya untuk perangkat ini. Bisa dimatikan kapan saja di aplikasi (nama Anda → Notifikasi) atau di pengaturan perangkat.',
+    ios: 'Di iPhone, notifikasi hanya bisa diaktifkan dari ikon DTC di Layar Utama. Pasang ikonnya dulu (lihat Panduan), buka DTC dari ikon itu, lalu coba lagi.',
+    denied: 'Notifikasi diblokir untuk DTC di perangkat ini. Buka pengaturan perangkat/browser → Notifikasi → DTC Academic Room → Izinkan, lalu coba lagi.',
+    unsupported: 'Browser ini belum mendukung notifikasi web. Gunakan Chrome, Edge atau Safari (iPhone, dari ikon di Layar Utama).', wait: 'Sebentar…', fail: 'Belum berhasil: '}
+    : {title: 'Turn on notifications', lead: '', ask: '', on: 'Turn on notifications', back: 'Not now, back to DTC', foot: '',
+    ios: 'On iPhone, notifications only work from the DTC icon on your Home Screen. Add the icon first (see the User guide), open DTC from it, then try again.',
+    denied: 'Notifications are blocked for DTC on this device. Open the device or browser settings → Notifications → DTC Academic Room → Allow, then try again.',
+    unsupported: 'This browser cannot get web notifications yet. Use Chrome, Edge, or Safari on iPhone (from the Home Screen icon).', wait: 'One moment…', fail: 'That did not work: '};
+  if (id) { document.documentElement.lang = 'id'; $('pTitle').textContent = T.title; $('pLead').textContent = T.lead; $('pAsk').innerHTML = T.ask; $('pOn').textContent = T.on; $('pBack').textContent = T.back; $('pFoot').textContent = T.foot; }
+  var say = function (t) { $('pMsg').textContent = t; $('pMsg').hidden = false; };
+  var UAx = navigator.userAgent || '', dev = (IOS ? 'iPhone' : /Android/.test(UAx) ? 'Android' : /Windows/.test(UAx) ? 'Windows' : /Mac/.test(UAx) ? 'Mac' : 'Computer') + (IOS ? '' : /Edg\//.test(UAx) ? ' · Edge' : /Chrome\//.test(UAx) ? ' · Chrome' : /Firefox\//.test(UAx) ? ' · Firefox' : '');
+  if (IOS && !standalone) { say(T.ios); $('pOn').hidden = true; $('pAsk').hidden = true; return; }
+  if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window) || !key) { say(T.unsupported); $('pOn').hidden = true; $('pAsk').hidden = true; return; }
+  if (Notification.permission === 'denied') { say(T.denied); $('pOn').hidden = true; $('pAsk').hidden = true; return; }
+  var bytes = function (b64) { var s = b64.replace(/-/g, '+').replace(/_/g, '/'); s += '==='.slice((s.length + 3) % 4); var raw = atob(s), out = new Uint8Array(raw.length); for (var i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i); return out; };
+  var b64u = function (str) { return btoa(unescape(encodeURIComponent(str))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); };
+  var same = function (a, b) { if (!a || a.byteLength !== b.length) return false; var x = new Uint8Array(a); for (var i = 0; i < b.length; i++) if (x[i] !== b[i]) return false; return true; };
+  $('pOn').onclick = function () {
+    var btn = this; btn.disabled = true; btn.textContent = T.wait; $('pMsg').hidden = true;
+    Notification.requestPermission().then(function (perm) {
+      if (perm !== 'granted') throw new Error(perm === 'denied' ? 'denied' : 'not allowed');
+      return navigator.serviceWorker.register('sw.js', {scope: './'}).then(function () { return navigator.serviceWorker.ready; });
+    }).then(function (reg) {
+      var k = bytes(key);
+      return reg.pushManager.getSubscription().then(function (old) {
+        if (old && same(old.options && old.options.applicationServerKey, k)) return old;
+        return (old ? old.unsubscribe() : Promise.resolve()).then(function () { return reg.pushManager.subscribe({userVisibleOnly: true, applicationServerKey: k}); });
+      });
+    }).then(function (sub) {
+      var j = sub.toJSON();
+      location.replace(APP + '?pushsub=' + b64u(JSON.stringify({endpoint: j.endpoint, p256dh: j.keys.p256dh, auth: j.keys.auth})) + '&dev=' + encodeURIComponent(dev) + '&src=home&view=dashboard');
+    }).catch(function (e) {
+      btn.disabled = false; btn.textContent = T.on;
+      say(e && e.message === 'denied' ? T.denied : T.fail + (e && e.message || e));
+    });
+  };
+})();
+</script>
+<script>
+(function () {
+  if (MODE === 'go' || MODE === 'push') return;
+  var $ = function (id) { return document.getElementById(id); };
+  document.body.className = 'page';
+  var android = /Android/i.test(UA), edge = /Edg\//.test(UA), chromeish = /Chrome\//.test(UA);
+  var inApp = /FBAN|FBAV|Instagram|Line\/|WhatsApp|; wv\)|GSA\//i.test(UA), iosSafari = IOS && /Safari\//.test(UA) && !/CriOS|FxiOS|EdgiOS/.test(UA) && !inApp;
+  var here = location.origin + location.pathname;
+  $('skip').href = APP + '?src=link'; $('openNow').href = location.pathname + '?app'; // in the app's own address: Android hands it to the installed app
+  // Installed from this page on a computer: Chrome turns this very tab into the app window. Go straight to the app.
+  try { var mq = matchMedia('(display-mode: standalone)'), go = function () { if (mq.matches) location.replace(APP + '?src=home'); }; if (mq.addEventListener) mq.addEventListener('change', go); else mq.addListener(go); } catch (e) {}
+  var show = function (id) { $(id).hidden = false; };
+  var steps = function (list) { var ol = $('manualSteps'); list.forEach(function (h, i) { var li = document.createElement('li'); li.innerHTML = '<span class="num">' + (i + 1) + '</span><span>' + h + '</span>'; ol.appendChild(li); }); };
+
+  if (IOS && !iosSafari) {                       // WhatsApp, Instagram, Chrome on iPhone…
+    show('cInApp');
+    $('copy').hidden = false;
+    $('inAppLead').textContent = /CriOS|FxiOS|EdgiOS/.test(UA) ? 'On iPhone, apps can only be added to the Home Screen from Safari.' : 'WhatsApp\'s built-in browser cannot install apps.';
+    $('inAppHelp').innerHTML = 'Tap <b>Copy link</b>, open <b>Safari</b> and paste it into the address bar. Or tap <b>⋯</b> / the compass icon on this screen and choose <b>Open in Safari</b>.';
+    $('copy').onclick = function () { var b = this, ok = function () { b.textContent = 'Link copied ✓ Now open Safari'; };
+      if (navigator.clipboard) navigator.clipboard.writeText(here).then(ok, function () { prompt('Copy this link:', here); }); else prompt('Copy this link:', here); };
+  } else if (iosSafari) {
+    show('cIos'); show('pointer');
+    setTimeout(function () { $('pointer').hidden = true; }, 12000);
+  } else if (android && inApp) {                 // WhatsApp's in-app browser on Android: one tap to Chrome
+    show('cInApp'); $('realBrowser').textContent = 'Chrome';
+    $('toChrome').hidden = false;
+    $('toChrome').href = 'intent://' + location.host + location.pathname + '?add#Intent;scheme=https;package=com.android.chrome;end';
+    $('inAppHelp').textContent = 'If the button does nothing: tap ⋮ at the top right, then "Open in Chrome" / "Open in browser".';
+  } else {
+    // Chrome, Edge, Samsung Internet: the browser's own install, in one tap. Manual steps if it does not offer it.
+    var desktop = !android;
+    if (desktop) { $('installLead').textContent = 'The DTC 26 icon appears on your desktop and taskbar, and the app opens in its own window.'; $('doneWhere').textContent = 'desktop or taskbar'; }
+    var deferred = null;
+    // Installed: only one thing left to do. Everything else on the page goes; on a computer the window switches to the app by itself.
+    function installed() {
+      ['cInstall', 'cManual'].forEach(function (id) { $(id).hidden = true; });
+      document.querySelectorAll('.note,.skip,.sub').forEach(function (n) { n.hidden = true; });
+      show('cDone'); window.scrollTo(0, 0);
+    }
+    window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); deferred = e; $('cManual').hidden = true; show('cInstall'); });
+    $('install').onclick = function () { if (!deferred) return; deferred.prompt(); deferred.userChoice.then(function (c) { if (c && c.outcome === 'accepted') installed(); deferred = null; }); };
+    window.addEventListener('appinstalled', installed);
+    setTimeout(function () {
+      if (deferred || !$('cDone').hidden) return;
+      show('cManual');
+      if (android) steps(['Tap <span class="chip">⋮</span> at the top right of Chrome.', 'Tap <b>Install app</b> or <b>Add to Home screen</b>.', 'Tap <b>Install</b> / <b>Add</b>. Done: open DTC from its icon.']);
+      else if (edge) { $('manualTitle').textContent = 'Install on your computer'; steps(['Click <span class="chip">…</span> at the top right of Edge.', 'Choose <b>Apps</b> → <b>Install this site as an app</b>.', 'Click <b>Install</b>. Done.']); }
+      else if (chromeish) { $('manualTitle').textContent = 'Install on your computer'; steps(['Click the <b>Install</b> icon at the right end of the address bar, or <span class="chip">⋮</span> → <b>Cast, save, and share</b> → <b>Install page as app</b>.', 'Click <b>Install</b>. Done.']); }
+      else { $('manualTitle').textContent = 'Save this page'; steps(['Bookmark this page (Ctrl/Cmd + D). Next time it opens the app straight away.']); }
+    }, 1500);
+  }
+})();
+</script>
+</body>
+</html>
